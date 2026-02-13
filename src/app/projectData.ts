@@ -2,7 +2,8 @@
 function p(path: string) {
     // Replace .png/.jpg extension with .webp (images were converted for optimization)
     const webpPath = path.replace(/\.(png|jpg|jpeg)$/i, '.webp')
-    return `/portfolio/${webpPath}`
+    // Important: Include the repository name (basePath) for GitHub Pages
+    return `/Portfolio/portfolio/${webpPath}`
 }
 
 export interface Project {
