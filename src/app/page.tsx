@@ -282,30 +282,53 @@ function FeaturedWorks({ onProjectClick }: { onProjectClick: (project: Project) 
 // ABOUT SECTION
 // ==========================================
 function AboutSection() {
+  const [language, setLanguage] = useState<'en' | 'pt'>('en')
+
+  const content = {
+    en: {
+      title: 'ABOUT ME',
+      description: 'I am a 3D Generalist focused on visual solutions for companies and agencies. I develop projects from initial modeling to final rendering for booths, press kits, products, brand activations, corporate events, and promotional materials. With both a technical and creative approach, I deliver realistic and functional imagery that aids in project visualization and approval, directly contributing to the success of activations, presentations, and campaigns.',
+      skills: ['Blender', 'Cycles', 'Twinmotion', 'Photoshop', 'Illustrator', 'Affinity']
+    },
+    pt: {
+      title: 'SOBRE MIM',
+      description: 'Sou um Generalista 3D focado em soluções visuais para empresas e agências. Desenvolvo projetos desde a modelagem inicial até a renderização final para estandes, press kits, produtos, ativações de marca, eventos corporativos e materiais promocionais. Com uma abordagem técnica e criativa, entrego imagens realistas e funcionais que auxiliam na visualização e aprovação de projetos, contribuindo diretamente para o sucesso de ativações, apresentações e campanhas.',
+      skills: ['Blender', 'Cycles', 'Twinmotion', 'Photoshop', 'Illustrator', 'Affinity']
+    }
+  }
+
+  const { title, description, skills } = content[language]
+
   return (
     <section id="about" className="py-24 bg-[#0f0f0f]">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div>
-            <h2 className="text-white text-3xl md:text-4xl font-bold tracking-widest mb-6">ABOUT ME</h2>
-            <div className="w-24 h-0.5 bg-white opacity-50 mb-8" />
-            <p className="text-gray-400 leading-relaxed mb-8">
-              I am a 3D Generalist focused on visual solutions for companies and agencies. I develop projects from initial modeling to final rendering for booths, press kits, products, brand activations, corporate events, and promotional materials. With both a technical and creative approach, I deliver realistic and functional imagery that aids in project visualization and approval, directly contributing to the success of activations, presentations, and campaigns.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {['Blender', 'Cycles', 'Twinmotion', 'Photoshop', 'Illustrator', 'Affinity'].map((skill) => (
-                <span key={skill} className="px-4 py-2 border border-gray-700 text-gray-400 text-sm tracking-wider hover:border-white hover:text-white transition-colors duration-300">{skill}</span>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-8">
-            {[{ number: '7+', label: 'YEARS EXPERIENCE' }, { number: '60+', label: 'PROJECTS COMPLETED' }, { number: '20+', label: 'HAPPY CLIENTS' }, { number: '2', label: 'AWARDS WON' }].map((stat) => (
-              <div key={stat.label} className="text-center p-6 bg-[#0a0a0a] border border-gray-800">
-                <div className="text-white text-4xl md:text-5xl font-bold mb-2">{stat.number}</div>
-                <div className="text-gray-500 text-xs tracking-widest">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+      <div className="max-w-4xl mx-auto px-6 flex flex-col items-start">
+        <div className="mb-10 flex gap-4">
+          <button
+            onClick={() => setLanguage('en')}
+            className={`px-4 py-1 text-xs tracking-widest transition-all duration-300 border ${language === 'en' ? 'bg-white text-black border-white' : 'text-gray-500 border-gray-800 hover:border-gray-600'}`}
+          >
+            ENGLISH
+          </button>
+          <button
+            onClick={() => setLanguage('pt')}
+            className={`px-4 py-1 text-xs tracking-widest transition-all duration-300 border ${language === 'pt' ? 'bg-white text-black border-white' : 'text-gray-500 border-gray-800 hover:border-gray-600'}`}
+          >
+            PORTUGUÊS
+          </button>
+        </div>
+
+        <div className="text-left mb-12">
+          <h2 className="text-white text-3xl md:text-4xl font-bold tracking-widest mb-4 uppercase">{title}</h2>
+          <div className="w-24 h-0.5 bg-white opacity-50" />
+        </div>
+
+        <p className="text-gray-400 leading-relaxed mb-12 text-lg text-left max-w-3xl">
+          {description}
+        </p>
+        <div className="flex flex-wrap justify-start gap-3">
+          {skills.map((skill) => (
+            <span key={skill} className="px-4 py-2 border border-gray-700 text-gray-400 text-sm tracking-widest hover:border-white hover:text-white transition-colors duration-300">{skill}</span>
+          ))}
         </div>
       </div>
     </section>
