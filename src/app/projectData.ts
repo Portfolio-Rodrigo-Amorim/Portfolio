@@ -1,9 +1,12 @@
+// Base path for GitHub Pages deployment
+const basePath = process.env.NODE_ENV === 'production' ? '/Portfolio' : ''
+
 // Helper to build portfolio image URLs (static files in /portfolio/)
 function p(path: string) {
     // Replace .png/.jpg extension with .webp (images were converted for optimization)
     const webpPath = path.replace(/\.(png|jpg|jpeg)$/i, '.webp')
     // Simply return the relative path to /portfolio/ folder
-    return `/portfolio/${webpPath}`
+    return `${basePath}/portfolio/${webpPath}`
 }
 
 export interface Project {
