@@ -1,13 +1,212 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
 import { projects, heroImages, type Project } from './projectData'
+
+// ==========================================
+// IMAGE LIGHTBOX WITH PINCH-TO-ZOOM
+// ==========================================
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const [scale, setScale] = useState(1)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [lastPinchDistance, setLastPinchDistance] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const MIN_SCALE = 1
+  const MAX_SCALE = 5
+
+  // Reset zoom
+  const resetZoom = useCallback(() => {
+    setScale(1)
+    setPosition({ x: 0, y: 0 })
+  }, [])
+
+  // Double-tap/click to zoom
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (scale > 1) {
+      resetZoom()
+    } else {
+      setScale(3)
+    }
+  }, [scale, resetZoom])
+
+  // Touch handlers for pinch-to-zoom
+  const getTouchDistance = (touches: globalThis.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const handleTouchStart = useCallback((e: ReactTouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      setLastPinchDistance(getTouchDistance(e.nativeEvent.touches))
+    } else if (e.touches.length === 1 && scale > 1) {
+      setIsDragging(true)
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y,
+      })
+    }
+  }, [scale, position])
+
+  const handleTouchMove = useCallback((e: ReactTouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      const newDistance = getTouchDistance(e.nativeEvent.touches)
+      if (lastPinchDistance > 0) {
+        const delta = newDistance / lastPinchDistance
+        setScale(prev => Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev * delta)))
+      }
+      setLastPinchDistance(newDistance)
+    } else if (e.touches.length === 1 && isDragging && scale > 1) {
+      e.preventDefault()
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      })
+    }
+  }, [lastPinchDistance, isDragging, dragStart, scale])
+
+  const handleTouchEnd = useCallback((e: ReactTouchEvent<HTMLDivElement>) => {
+    setLastPinchDistance(0)
+    setIsDragging(false)
+    // If scaled back to ~1, snap to reset
+    if (scale <= 1.05) {
+      resetZoom()
+    }
+    // Double-tap detection
+    const now = Date.now()
+    const lastTap = (containerRef.current as HTMLDivElement & { _lastTap?: number })?._lastTap || 0
+    if (now - lastTap < 300 && e.changedTouches.length === 1) {
+      if (scale > 1) {
+        resetZoom()
+      } else {
+        setScale(3)
+      }
+    }
+    if (containerRef.current) {
+      (containerRef.current as HTMLDivElement & { _lastTap?: number })._lastTap = now
+    }
+  }, [scale, resetZoom])
+
+  // Mouse wheel zoom (desktop)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? 0.9 : 1.1
+      setScale(prev => {
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev * delta))
+        if (newScale <= 1.05) {
+          setPosition({ x: 0, y: 0 })
+          return 1
+        }
+        return newScale
+      })
+    }
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
+  }, [])
+
+  // Mouse drag (desktop)
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (scale > 1) {
+      setIsDragging(true)
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+    }
+  }, [scale, position])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDragging && scale > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      })
+    }
+  }, [isDragging, dragStart, scale])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center animate-fade-in" style={{ touchAction: 'none' }}>
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-[210] w-12 h-12 flex items-center justify-center bg-black/60 hover:bg-white hover:text-black text-white transition-colors duration-300 rounded-full"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Zoom indicator */}
+      {scale > 1 && (
+        <div className="absolute top-4 left-4 z-[210] px-3 py-1.5 bg-black/60 text-white text-xs tracking-wider rounded-full font-mono">
+          {Math.round(scale * 100)}%
+        </div>
+      )}
+
+      {/* Reset zoom button */}
+      {scale > 1 && (
+        <button
+          onClick={resetZoom}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[210] px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs tracking-wider rounded-full transition-colors duration-300 backdrop-blur-sm"
+        >
+          RESET ZOOM
+        </button>
+      )}
+
+      {/* Image container */}
+      <div
+        ref={containerRef}
+        className="w-full h-full flex items-center justify-center overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onDoubleClick={handleDoubleClick}
+        style={{ cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in' }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-full max-h-full object-contain select-none"
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          }}
+          draggable={false}
+        />
+      </div>
+    </div>
+  )
+}
 
 // ==========================================
 // CAROUSEL COMPONENT (for project modals)
 // ==========================================
 function Carousel({ images, alt }: { images: string[]; alt: string }) {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % images.length)
@@ -27,26 +226,51 @@ function Carousel({ images, alt }: { images: string[]; alt: string }) {
   }, [nextSlide, prevSlide])
 
   return (
-    <div className="relative w-full aspect-video bg-black">
-      <img src={images[currentSlide]} alt={`${alt} - Image ${currentSlide + 1}`} className="w-full h-full object-contain" />
-      {images.length > 1 && (
-        <>
-          <button onClick={(e) => { e.stopPropagation(); prevSlide(); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-white hover:text-black transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); nextSlide(); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-white hover:text-black transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-          </button>
-        </>
-      )}
-      {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
-          <span className="text-white/70 text-sm font-mono tracking-wider">
-            {String(currentSlide + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
-          </span>
+    <>
+      <div className="relative w-full aspect-video bg-black">
+        <img
+          src={images[currentSlide]}
+          alt={`${alt} - Image ${currentSlide + 1}`}
+          className="w-full h-full object-contain cursor-zoom-in"
+          onClick={() => setLightboxOpen(true)}
+        />
+        {/* Zoom hint icon */}
+        <div className="absolute top-4 left-4 z-10 pointer-events-none">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/50 backdrop-blur-sm rounded-full text-white/70 text-xs tracking-wider">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+            </svg>
+            <span className="hidden sm:inline">ZOOM</span>
+          </div>
         </div>
+        {images.length > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); prevSlide(); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-white hover:text-black transition-colors duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); nextSlide(); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-white hover:text-black transition-colors duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </>
+        )}
+        {images.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <span className="text-white/70 text-sm font-mono tracking-wider">
+              {String(currentSlide + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Fullscreen Lightbox with Zoom */}
+      {lightboxOpen && (
+        <ImageLightbox
+          src={images[currentSlide]}
+          alt={`${alt} - Image ${currentSlide + 1}`}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
-    </div>
+    </>
   )
 }
 
