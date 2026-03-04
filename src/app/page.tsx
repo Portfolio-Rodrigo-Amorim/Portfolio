@@ -1,7 +1,53 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
+import dynamic from 'next/dynamic'
 import { projects, heroImages, type Project } from './projectData'
+
+// ==========================================
+// SPLINE 3D BACKGROUND (dynamic, no SSR)
+// ==========================================
+const Spline = dynamic(() => import('@splinetool/react-spline'), {
+  ssr: false,
+  loading: () => <div style={{ background: '#0a0a0a', width: '100%', height: '100%' }} />,
+})
+
+function SplineBackground() {
+  const [isMobile, setIsMobile] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    const mobile = window.innerWidth < 768
+    const lowEnd = navigator.hardwareConcurrency <= 2
+    setIsMobile(mobile || lowEnd)
+  }, [])
+
+  if (isMobile) return null
+
+  return (
+    <div
+      className="fixed inset-0"
+      style={{ zIndex: 0 }}
+    >
+      {/* Fallback bg while Spline loads */}
+      <div
+        className="absolute inset-0 bg-[#0a0a0a] transition-opacity duration-700"
+        style={{ opacity: loaded ? 0 : 1, pointerEvents: 'none' }}
+      />
+      <Spline
+        scene="https://prod.spline.design/VGItPOXMTu6Slzie/scene.splinecode"
+        onLoad={() => setLoaded(true)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+        }}
+      />
+    </div>
+  )
+}
 
 // ==========================================
 // IMAGE LIGHTBOX WITH PINCH-TO-ZOOM
@@ -342,9 +388,30 @@ function Navigation() {
 }
 
 // ==========================================
-// HERO SECTION WITH AUTO-CAROUSEL
+// HERO SECTION (transparent — Spline shows through)
 // ==========================================
 function HeroSection() {
+  return (
+    <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden" style={{ zIndex: 1, pointerEvents: 'none' }}>
+      {/* Subtle gradient overlay — pointer-events:none so mouse reaches Spline behind */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/60 via-transparent to-[#0a0a0a]/80" style={{ zIndex: 0, pointerEvents: 'none' }} />
+      <div className="relative z-10 text-center px-6 animate-fade-in" style={{ pointerEvents: 'auto' }}>
+        <p className="text-gray-400 text-sm md:text-base tracking-[0.3em] mb-6 font-light">3D GENERALIST &amp; TECHNICAL ARTIST</p>
+        <h1 className="text-white text-5xl md:text-7xl lg:text-8xl font-bold tracking-wider mb-10">RODRIGO AMORIM</h1>
+      </div>
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10" style={{ pointerEvents: 'auto' }}>
+        <div className="w-6 h-10 border-2 border-gray-500 rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-gray-500 rounded-full mt-2 animate-bounce" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ==========================================
+// GALLERY SECTION (moved from hero carousel)
+// ==========================================
+function GallerySection() {
   const [currentImage, setCurrentImage] = useState(0)
   const [nextImage, setNextImage] = useState(1)
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -375,17 +442,20 @@ function HeroSection() {
   }, [nextImage])
 
   return (
-    <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative h-screen flex items-center justify-center overflow-hidden" style={{ zIndex: 1 }}>
+      {/* Image carousel background */}
       <div className="absolute inset-0 z-0">
         <img key={`c-${currentImage}`} src={heroImages[currentImage]} alt="Portfolio" className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000" style={{ opacity: isTransitioning ? 0 : 1 }} />
         <img key={`n-${nextImage}`} src={heroImages[nextImage]} alt="Portfolio" className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000" style={{ opacity: isTransitioning ? 1 : 0 }} />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/70 via-[#0a0a0a]/50 to-[#0a0a0a]" />
       </div>
+
+      {/* VIEW PROJECTS button */}
       <div className="relative z-10 text-center px-6 animate-fade-in">
-        <p className="text-gray-400 text-sm md:text-base tracking-[0.3em] mb-6 font-light">3D GENERALIST &amp; TECHNICAL ARTIST</p>
-        <h1 className="text-white text-5xl md:text-7xl lg:text-8xl font-bold tracking-wider mb-10">RODRIGO AMORIM</h1>
         <a href="#work" className="inline-block bg-white text-black px-10 py-4 text-sm font-semibold tracking-widest hover:bg-gray-200 transition-all duration-300 hover:scale-105 hover:shadow-xl">VIEW PROJECTS</a>
       </div>
+
+      {/* Pagination dots */}
       <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-10 flex gap-3">
         {heroImages.map((_, index) => (
           <button
@@ -395,11 +465,6 @@ function HeroSection() {
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}
-      </div>
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10">
-        <div className="w-6 h-10 border-2 border-gray-500 rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-gray-500 rounded-full mt-2 animate-bounce" />
-        </div>
       </div>
     </section>
   )
@@ -450,7 +515,7 @@ function FeaturedWorks({ onProjectClick }: { onProjectClick: (project: Project) 
   }
 
   return (
-    <section id="work" className="py-24 bg-[#0a0a0a]">
+    <section id="work" className="relative z-10 py-24 bg-[#0a0a0a]">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* Header with Title and Filter */}
@@ -561,7 +626,7 @@ function AboutSection() {
   const { title, description, skills } = content[language]
 
   return (
-    <section id="about" className="py-24 bg-[#0f0f0f]">
+    <section id="about" className="relative z-10 py-24 bg-[#0f0f0f]">
       <div className="max-w-4xl mx-auto px-6 flex flex-col items-start">
         <div className="mb-10 flex gap-4">
           <button
@@ -601,7 +666,7 @@ function AboutSection() {
 // ==========================================
 function CallToAction() {
   return (
-    <section id="contact" className="py-24 bg-[#0a0a0a] border-t border-gray-800">
+    <section id="contact" className="relative z-10 py-24 bg-[#0a0a0a] border-t border-gray-800">
       <div className="max-w-4xl mx-auto px-6 text-center">
         <h2 className="text-white text-3xl md:text-4xl font-bold tracking-wider mb-12">LET&apos;S BUILD SOMETHING EXTRAORDINARY.</h2>
         <div className="flex items-center justify-center mb-10">
@@ -617,7 +682,7 @@ function CallToAction() {
 
 function Footer() {
   return (
-    <footer className="py-8 bg-[#0a0a0a] border-t border-gray-900">
+    <footer className="relative z-10 py-8 bg-[#0a0a0a] border-t border-gray-900">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="text-gray-500 text-sm tracking-wider">© 2025 RODRIGO AMORIM. ALL RIGHTS RESERVED.</p>
         <p className="text-gray-500 text-sm tracking-wider">DESIGNED FOR THE DIGITAL FRONTIER.</p>
@@ -634,8 +699,10 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
+      <SplineBackground />
       <Navigation />
       <HeroSection />
+      <GallerySection />
       <FeaturedWorks onProjectClick={setSelectedProject} />
       <AboutSection />
       <CallToAction />

@@ -66,3 +66,6 @@ mini-services/
 examples/
 prisma/
 .zscripts/
+
+# User specifically requested to ignore this folder
+Spline Skill/

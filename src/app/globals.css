@@ -118,6 +118,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow: auto !important;
   }
   html {
     scroll-behavior: smooth;
