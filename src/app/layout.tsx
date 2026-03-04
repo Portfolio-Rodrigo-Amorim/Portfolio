@@ -13,13 +13,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const basePath = process.env.NODE_ENV === 'production' ? '/Portfolio' : ''
+
 export const metadata: Metadata = {
   title: "Rodrigo Amorim | 3D Generalist & Technical Artist",
   description: "Portfolio of Rodrigo Amorim - 3D Generalist and Technical Artist specializing in architectural visualization, game development, and cinematic productions.",
   keywords: ["3D Artist", "Technical Artist", "3D Generalist", "Blender", "Unreal Engine", "Houdini", "Portfolio"],
   authors: [{ name: "Rodrigo Amorim" }],
   icons: {
-    icon: "/favicon.ico",
+    icon: `${basePath}/logo.svg`,
   },
   openGraph: {
     title: "Rodrigo Amorim | 3D Generalist & Technical Artist",
