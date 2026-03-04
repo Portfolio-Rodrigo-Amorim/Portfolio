@@ -430,11 +430,24 @@ const filters = ['ALL', 'EVENTS & SCENOGRAPHY', 'STANDS & ACTIVATIONS', 'PRESS K
 
 function FeaturedWorks({ onProjectClick }: { onProjectClick: (project: Project) => void }) {
   const [activeFilter, setActiveFilter] = useState('ALL')
+  const [showAll, setShowAll] = useState(false)
+
+  // Number of projects visible initially (3 rows × 3 columns on desktop)
+  const INITIAL_VISIBLE = 9
 
   const filteredProjects = projects.filter((project) => {
     if (activeFilter === 'ALL') return true
     return categoryMap[project.category] === activeFilter
   })
+
+  const visibleProjects = showAll ? filteredProjects : filteredProjects.slice(0, INITIAL_VISIBLE)
+  const hasMore = filteredProjects.length > INITIAL_VISIBLE
+
+  // Reset showAll when filter changes
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter)
+    setShowAll(false)
+  }
 
   return (
     <section id="work" className="py-24 bg-[#0a0a0a]">
@@ -451,7 +464,7 @@ function FeaturedWorks({ onProjectClick }: { onProjectClick: (project: Project) 
             {filters.map((filter) => (
               <button
                 key={filter}
-                onClick={() => setActiveFilter(filter)}
+                onClick={() => handleFilterChange(filter)}
                 className={`text-sm tracking-widest uppercase pb-2 transition-all duration-300 font-semibold
                   ${activeFilter === filter
                     ? 'text-white border-b-2 border-[#00E0A0]'
@@ -466,7 +479,7 @@ function FeaturedWorks({ onProjectClick }: { onProjectClick: (project: Project) 
 
         {/* Projects Grid */}
         <div key={activeFilter} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
-          {filteredProjects.map((project, index) => (
+          {visibleProjects.map((project, index) => (
             <div
               key={project.id}
               className="group relative aspect-square overflow-hidden cursor-pointer"
@@ -490,6 +503,30 @@ function FeaturedWorks({ onProjectClick }: { onProjectClick: (project: Project) 
             </div>
           ))}
         </div>
+
+        {/* Show More / Show Less Button */}
+        {hasMore && (
+          <div className="flex justify-center mt-12">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="group relative px-10 py-4 border border-gray-700 text-gray-400 text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-500 hover:border-white hover:text-white hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+            >
+              <span className="relative z-10 flex items-center gap-3">
+                {showAll ? 'SHOW LESS' : 'SHOW MORE'}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 transition-transform duration-500 ${showAll ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+              <span className="absolute bottom-0 left-0 w-full h-0 bg-white/5 transition-all duration-500 group-hover:h-full" />
+            </button>
+          </div>
+        )}
 
         {filteredProjects.length === 0 && (
           <div className="text-center text-gray-500 py-12">
